@@ -1,0 +1,31 @@
+{
+  "openrouter": {
+    "api_key": "YOUR_OPENROUTER_API_KEY",
+    "base_url": "https://openrouter.ai/api/v1",
+    "models": {
+      "thinking": "google/gemini-2.5-flash-lite",
+      "response": "anthropic/claude-sonnet-4",
+      "vision": "google/gemini-2.0-flash-exp:free"
+    }
+  },
+  "vk": {
+    "access_token": "YOUR_VK_ACCESS_TOKEN",
+    "group_id": "YOUR_GROUP_ID",
+    "api_version": "5.131"
+  },
+  "schedule": {
+    "monologue_interval_hours": 1,
+    "publication_times": ["00:00", "12:00"],
+    "timezone": "Europe/Moscow"
+  },
+  "state": {
+    "initial_certainty": 0.3,
+    "initial_intrusion": 0.1,
+    "initial_coherence": 0.9,
+    "decay_rate": 0.02
+  },
+  "database": {
+    "path": "memory/solipsist.db"
+  }
+}
+
