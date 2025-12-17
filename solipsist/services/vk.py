@@ -1,12 +1,17 @@
 """Клиент VK API."""
 import requests
 import logging
+import time
+import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 from ..config.loader import load_config
 
 logger = logging.getLogger(__name__)
+
+# Максимальная длина одного поста в VK
+MAX_VK_POST_LENGTH = 3500
 
 
 class VKClient:
@@ -155,20 +160,162 @@ class VKClient:
         logger.info(f"Total comments retrieved: {len(all_comments)}")
         return all_comments[:count]
 
+    def _make_post_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
+        """Выполнить POST-запрос к VK API с передачей параметров через data (для длинных текстов)."""
+        if not self.access_token or self.access_token == "YOUR_VK_ACCESS_TOKEN":
+            logger.error("VK access token not configured")
+            return None
+
+        params["access_token"] = self.access_token
+        params["v"] = self.api_version
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/{method}",
+                data=params,  # Используем data вместо params для длинных текстов
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                logger.error(f"VK API error: {data['error']}")
+                return None
+
+            return data.get("response")
+        except Exception as e:
+            logger.error(f"VK API request error: {e}")
+            return None
+
+    def split_manifest(self, text: str) -> List[str]:
+        """Разбить текст манифеста на части по MAX_VK_POST_LENGTH.
+
+        Разбиение происходит по абзацам и предложениям, не разрывая слова.
+        """
+        if len(text) <= MAX_VK_POST_LENGTH:
+            return [text]
+
+        parts = []
+        current_part = ""
+
+        # Разбиваем на абзацы (двойные переносы строк)
+        paragraphs = text.split('\n\n')
+
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+
+            # Если абзац сам по себе слишком длинный, разбиваем на предложения
+            if len(paragraph) > MAX_VK_POST_LENGTH:
+                # Сначала сохраняем накопленную часть, если есть
+                if current_part:
+                    parts.append(current_part.strip())
+                    current_part = ""
+
+                # Разбиваем длинный абзац на предложения
+                sentences = self._split_into_sentences(paragraph)
+                for sentence in sentences:
+                    # Если предложение само слишком длинное, разбиваем по словам
+                    if len(sentence) > MAX_VK_POST_LENGTH:
+                        if current_part:
+                            parts.append(current_part.strip())
+                            current_part = ""
+                        # Разбиваем длинное предложение на части по словам
+                        words = sentence.split()
+                        for word in words:
+                            if len(current_part) + len(word) + 1 > MAX_VK_POST_LENGTH:
+                                if current_part:
+                                    parts.append(current_part.strip())
+                                current_part = word
+                            else:
+                                if current_part:
+                                    current_part += " " + word
+                                else:
+                                    current_part = word
+                    elif len(current_part) + len(sentence) + 1 > MAX_VK_POST_LENGTH:
+                        if current_part:
+                            parts.append(current_part.strip())
+                        current_part = sentence
+                    else:
+                        if current_part:
+                            current_part += "\n" + sentence
+                        else:
+                            current_part = sentence
+            else:
+                # Обычный абзац - добавляем к текущей части если помещается
+                needed_length = len(current_part) + len(paragraph) + (2 if current_part else 0)
+                if needed_length > MAX_VK_POST_LENGTH:
+                    if current_part:
+                        parts.append(current_part.strip())
+                    current_part = paragraph
+                else:
+                    if current_part:
+                        current_part += "\n\n" + paragraph
+                    else:
+                        current_part = paragraph
+
+        # Добавляем последнюю часть
+        if current_part:
+            parts.append(current_part.strip())
+
+        return parts
+
+    def _split_into_sentences(self, text: str) -> List[str]:
+        """Разбить текст на предложения."""
+        # Разбиваем по точкам, восклицательным и вопросительным знакам
+        sentences = re.split(r'([.!?]+)', text)
+        result = []
+        for i in range(0, len(sentences) - 1, 2):
+            if i + 1 < len(sentences):
+                result.append((sentences[i] + sentences[i + 1]).strip())
+            elif sentences[i].strip():
+                result.append(sentences[i].strip())
+        return [s for s in result if s]
+
     def post_message(self, message: str, attachments: Optional[List[str]] = None) -> Optional[int]:
-        """Опубликовать пост на стене группы."""
-        params = {
-            "owner_id": f"-{self.group_id}",
-            "message": message
-        }
+        """Опубликовать пост на стене группы (с поддержкой длинных текстов)."""
+        # Разбиваем текст на части если он слишком длинный
+        parts = self.split_manifest(message)
 
-        if attachments:
-            params["attachments"] = ",".join(attachments)
+        if len(parts) > 1:
+            logger.info(f"Splitting message into {len(parts)} parts")
 
-        result = self._make_request("wall.post", params)
-        if result and "post_id" in result:
-            return result["post_id"]
-        return None
+        first_post_id = None
+
+        for i, part in enumerate(parts):
+            # Добавляем пометку о части, если частей больше одной
+            if len(parts) > 1:
+                part_text = f"[Манифест. Часть {i+1}/{len(parts)}]\n\n{part}"
+            else:
+                part_text = part
+
+            params = {
+                "owner_id": f"-{self.group_id}",
+                "message": part_text
+            }
+
+            if attachments and i == 0:  # Вложения только к первой части
+                params["attachments"] = ",".join(attachments)
+
+            # Используем POST с data для избежания ошибки 414
+            result = self._make_post_request("wall.post", params)
+
+            if result and "post_id" in result:
+                post_id = result["post_id"]
+                if first_post_id is None:
+                    first_post_id = post_id
+
+                logger.info(f"Published part {i+1}/{len(parts)} as post {post_id}")
+
+                # Пауза между публикациями (кроме последней)
+                if i < len(parts) - 1:
+                    time.sleep(1.5)  # 1-2 секунды пауза
+            else:
+                logger.error(f"Failed to publish part {i+1}/{len(parts)}")
+                return None
+
+        return first_post_id
 
     def reply_to_comment(
         self,

@@ -40,3 +40,4 @@ def count_words(text: str) -> int:
         return 0
     return len(text.split())
 
+
