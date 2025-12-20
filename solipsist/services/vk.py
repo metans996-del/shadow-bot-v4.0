@@ -20,21 +20,30 @@ class VKClient:
     def __init__(self):
         """Инициализация клиента."""
         config = load_config()
-        self.access_token = config.vk_token
-        self.group_id = config.get("vk.group_id")
+        # Используем group_access_token для публикаций и ответов
+        self.group_access_token = config.vk_group_access_token
+        self.user_access_token = config.vk_user_access_token  # Опционально для чтения
+        self.group_id = config.vk_group_id
+        self.creator_user_id = config.vk_creator_user_id
         self.api_version = config.get("vk.api_version", "5.131")
         self.api_base = "https://api.vk.com/method"
 
-        if not self.access_token or self.access_token == "YOUR_VK_ACCESS_TOKEN":
-            logger.warning("VK access token not configured")
+        # Для обратной совместимости
+        self.access_token = self.group_access_token
 
-    def _make_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
+        if not self.group_access_token or self.group_access_token.startswith("YOUR_"):
+            logger.warning("VK group access token not configured")
+
+    def _make_request(self, method: str, params: Dict[str, Any], use_user_token: bool = False) -> Optional[Dict]:
         """Выполнить запрос к VK API."""
-        if not self.access_token or self.access_token == "YOUR_VK_ACCESS_TOKEN":
+        # Выбираем токен: user для чтения (если доступен), group для публикаций
+        token = self.user_access_token if (use_user_token and self.user_access_token) else self.group_access_token
+
+        if not token or token.startswith("YOUR_"):
             logger.error("VK access token not configured")
             return None
 
-        params["access_token"] = self.access_token
+        params["access_token"] = token
         params["v"] = self.api_version
 
         try:
@@ -67,7 +76,8 @@ class VKClient:
             "filter": "owner"  # Только посты от имени группы
         }
 
-        posts_response = self._make_request("wall.get", posts_params)
+        # Для чтения можно использовать user_token, если доступен
+        posts_response = self._make_request("wall.get", posts_params, use_user_token=True)
         if not posts_response or "items" not in posts_response:
             logger.warning("Failed to get posts or no posts found")
             return []
@@ -92,7 +102,8 @@ class VKClient:
                 "fields": ""
             }
 
-            comments_response = self._make_request("wall.getComments", comments_params)
+            # Для чтения можно использовать user_token, если доступен
+            comments_response = self._make_request("wall.getComments", comments_params, use_user_token=True)
             if not comments_response or "items" not in comments_response:
                 continue
 
@@ -162,11 +173,11 @@ class VKClient:
 
     def _make_post_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
         """Выполнить POST-запрос к VK API с передачей параметров через data (для длинных текстов)."""
-        if not self.access_token or self.access_token == "YOUR_VK_ACCESS_TOKEN":
-            logger.error("VK access token not configured")
+        if not self.group_access_token or self.group_access_token.startswith("YOUR_"):
+            logger.error("VK group access token not configured")
             return None
 
-        params["access_token"] = self.access_token
+        params["access_token"] = self.group_access_token
         params["v"] = self.api_version
 
         try:
@@ -292,13 +303,15 @@ class VKClient:
 
             params = {
                 "owner_id": f"-{self.group_id}",
-                "message": part_text
+                "message": part_text,
+                "from_group": 1  # Публикация от имени сообщества
             }
 
             if attachments and i == 0:  # Вложения только к первой части
                 params["attachments"] = ",".join(attachments)
 
             # Используем POST с data для избежания ошибки 414
+            logger.info("Replying as community")
             result = self._make_post_request("wall.post", params)
 
             if result and "post_id" in result:
@@ -323,15 +336,17 @@ class VKClient:
         comment_id: int,
         message: str
     ) -> Optional[int]:
-        """Ответить на комментарий."""
+        """Ответить на комментарий от имени сообщества."""
         params = {
             "owner_id": f"-{self.group_id}",
             "post_id": post_id,
             "reply_to_comment": comment_id,
-            "message": message
+            "message": message,
+            "from_group": 1  # Ответ от имени сообщества
         }
 
-        result = self._make_request("wall.createComment", params)
+        logger.info("Replying as community")
+        result = self._make_post_request("wall.createComment", params)
         if result and "comment_id" in result:
             return result["comment_id"]
         return None

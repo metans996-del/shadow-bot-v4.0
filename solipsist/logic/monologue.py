@@ -25,19 +25,26 @@ class MonologueGenerator:
         state_context = self.state.get_state_context()
 
         for i in range(count):
-            prompt = f"""Сгенерируй одну короткую философскую мысль о солипсизме, реальности и существовании.
-            Мысль должна быть глубокой, но краткой (1-2 предложения).
-            Контекст текущего состояния: {state_context}
+            prompt = f"""生成一条关于唯我论、现实和存在的简短哲学思考。
+思想应深刻但简洁（1-2句话）。
+当前状态上下文：{state_context}
 
-            Мысль {i+1} из {count}:"""
+思考 {i+1}/{count}："""
 
-            thought = self.llm.think(prompt, context="Ты философ-солипсист, размышляющий о природе реальности и собственного существования.")
+            system_context = """你是唯我论哲学家，思考现实本质与自身存在。
+严格要求：
+1. 回答必须严格使用中文
+2. 使用最大语义密度，极简表达，节省token
+3. 每个字都必须承载最大意义
+4. 避免冗余词汇和废话"""
+
+            thought = self.llm.think(prompt, context=system_context)
 
             if thought:
                 thoughts.append(thought.strip())
             else:
-                # Fallback мысль
-                thoughts.append("Существую ли я? Или это тоже вопрос, заданный не мне?")
+                # Fallback мысль (на китайском для консистентности)
+                thoughts.append("我存在吗？或者这问题也不是向我提出的？")
 
         monologue = Monologue(
             monologue_id=str(uuid.uuid4()),
@@ -46,5 +53,6 @@ class MonologueGenerator:
         )
 
         return monologue
+
 
 

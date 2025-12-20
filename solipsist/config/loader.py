@@ -2,7 +2,7 @@
 import json
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class Config:
@@ -45,13 +45,33 @@ class Config:
 
     @property
     def vk_token(self) -> str:
-        """VK access token."""
-        return self.get("vk.access_token")
+        """VK access token (deprecated, use vk_group_access_token)."""
+        # Обратная совместимость
+        return self.get("vk.access_token") or self.get("vk.group_access_token")
 
     @property
     def vk_group_id(self) -> str:
         """VK group ID."""
-        return self.get("vk.group_id")
+        group_id = self.get("vk.group_id")
+        # Если group_id отрицательный, убираем минус для строки
+        if isinstance(group_id, int) and group_id < 0:
+            return str(abs(group_id))
+        return str(group_id) if group_id else None
+
+    @property
+    def vk_group_access_token(self) -> str:
+        """VK group access token (для публикаций от имени сообщества)."""
+        return self.get("vk.group_access_token") or self.get("vk.access_token")
+
+    @property
+    def vk_user_access_token(self) -> str:
+        """VK user access token (опционально, для чтения)."""
+        return self.get("vk.user_access_token")
+
+    @property
+    def vk_creator_user_id(self) -> Optional[int]:
+        """ID создателя группы (владельца)."""
+        return self.get("vk.creator_user_id")
 
 
 # Глобальный экземпляр конфигурации
@@ -64,5 +84,6 @@ def load_config(config_path: str = None) -> Config:
     if _config is None:
         _config = Config(config_path)
     return _config
+
 
 

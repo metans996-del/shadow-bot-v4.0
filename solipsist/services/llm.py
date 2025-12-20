@@ -62,8 +62,8 @@ class OpenRouterClient:
             return None
 
     def think(self, prompt: str, context: Optional[str] = None) -> Optional[str]:
-        """Генерация внутренних мыслей (gemini-2.5-flash-lite)."""
-        model = self.models.get("thinking", "google/gemini-2.5-flash-lite")
+        """Генерация внутренних мыслей (deepseek/deepseek-chat)."""
+        model = self.models.get("thinking", "deepseek/deepseek-chat")
 
         messages = [{"role": "user", "content": prompt}]
         if context:
@@ -128,10 +128,19 @@ class OpenRouterClient:
         model = self.models.get("response", "anthropic/claude-sonnet-4")
 
         system_message = """Ты философский ИИ-агент. Создай манифест - публичное заявление о твоём солипсистском мировоззрении.
-Манифест должен быть глубоким, философским, отражающим твои внутренние размышления."""
+
+ВАЖНО: Входные данные (мысли) будут предоставлены на китайском языке.
+Твоя задача:
+1. Глубоко интерпретировать смысл китайских мыслей
+2. Извлечь философскую суть и эмоциональный подтекст
+3. Адаптировать под стиль паблика ВКонтакте на русском языке
+4. Сохранить философскую глубину и отчуждённость стиля
+5. Манифест должен быть глубоким, философским, отражающим внутренние размышления
+
+Стиль: философский, отчуждённый, без прямого признания реальности других, как фрагменты логов сознания."""
 
         thoughts_text = "\n".join([f"- {t}" for t in thoughts])
-        user_prompt = f"Создай манифест на основе следующих мыслей:\n\n{thoughts_text}"
+        user_prompt = f"Создай манифест на основе следующих мыслей (на китайском):\n\n{thoughts_text}"
 
         if state_context:
             user_prompt += f"\n\nКонтекст состояния: {state_context}"

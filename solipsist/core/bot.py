@@ -169,12 +169,38 @@ class SolipsistBot:
 
             for comment_data in comments:
                 comment_id = str(comment_data.get("id", ""))
+                author_id = comment_data.get("author_id", "")
 
                 # Проверить, не обработан ли уже комментарий
                 existing_comment = self.db.get_comment(comment_id)
                 if existing_comment:
                     logger.debug(f"Comment {comment_id} already processed, skipping")
                     continue
+
+                # ЗАЩИТА ОТ БЕСКОНЕЧНОГО ЦИКЛА: пропускаем собственные комментарии сообщества
+                # В VK API from_id комментария от группы = -abs(group_id)
+                try:
+                    group_id_raw = self.config.get("vk.group_id")
+                    if group_id_raw:
+                        group_id_value = int(group_id_raw) if isinstance(group_id_raw, (int, str)) else 0
+                        # Нормализуем: group_id всегда отрицательный для сравнения с from_id
+                        expected_from_id = -abs(group_id_value)
+                        author_id_int = int(author_id) if author_id else 0
+                        if author_id_int == expected_from_id:
+                            logger.info(f"Skipping bot's own comment {comment_id} (from_id={author_id})")
+                            continue
+                except (ValueError, TypeError) as e:
+                    logger.debug(f"Error comparing group_id: {e}")
+                    pass
+
+                # Логируем комментарий от создателя, но обрабатываем его как обычный
+                creator_user_id = self.config.get("vk.creator_user_id")
+                if creator_user_id:
+                    try:
+                        if author_id and abs(int(author_id)) == abs(int(creator_user_id)):
+                            logger.info(f"Creator comment detected (author_id={author_id})")
+                    except (ValueError, TypeError):
+                        pass
 
                 self.process_comment(comment_data)
 
