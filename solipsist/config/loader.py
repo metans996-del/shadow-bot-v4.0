@@ -85,5 +85,3 @@ def load_config(config_path: str = None) -> Config:
         _config = Config(config_path)
     return _config
 
-
-

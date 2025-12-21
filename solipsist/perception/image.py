@@ -32,5 +32,3 @@ class ImagePerception:
                 "has_content": False
             }
 
-
-

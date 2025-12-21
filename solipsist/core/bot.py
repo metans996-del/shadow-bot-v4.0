@@ -111,6 +111,18 @@ class SolipsistBot:
                 comment.responded = True
                 comment.response_text = response_text
                 logger.info(f"Generated response for comment {comment.comment_id}")
+
+                # Публикуем ответ в VK
+                try:
+                    post_id = int(comment.post_id)
+                    comment_id = int(comment.comment_id)
+                    reply_id = self.vk.reply_to_comment(post_id, comment_id, response_text)
+                    if reply_id:
+                        logger.info(f"Published reply {reply_id} to comment {comment.comment_id}")
+                    else:
+                        logger.warning(f"Failed to publish reply to comment {comment.comment_id}")
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Error publishing reply: {e}")
             else:
                 logger.info(f"Decided not to respond to comment {comment.comment_id}")
 

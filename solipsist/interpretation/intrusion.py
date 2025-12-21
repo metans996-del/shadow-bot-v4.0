@@ -38,5 +38,3 @@ class IntrusionEvaluator:
         # Ограничить до [0.0, 1.0]
         return min(1.0, max(0.0, base_score))
 
-
-

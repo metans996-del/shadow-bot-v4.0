@@ -61,5 +61,3 @@ class ResponseGenerator:
 
         return response
 
-
-

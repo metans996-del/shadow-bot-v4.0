@@ -75,7 +75,7 @@ class TextPerception:
                 logger.warning("LLM text analysis failed, using defaults")
                 return {"sentiment": "neutral", "themes": [], "pressure": 0.0}
 
-            # Извлечь JSON из ответа (могут быть markdown блоки или текст вокруг)
+            # Извлечь JSON из ответа
             json_str = self._extract_json(response)
 
             if not json_str:
@@ -119,7 +119,7 @@ class TextPerception:
         if json_match:
             return json_match.group(1).strip()
 
-        # Попробовать найти JSON объект (начиная с первой { и находя соответствующую })
+        # Попробовать найти JSON объект
         start_idx = text.find('{')
         if start_idx == -1:
             return None
@@ -140,6 +140,5 @@ class TextPerception:
         if brace_count == 0:
             return text[start_idx:end_idx].strip()
 
-        # Если не получилось найти правильный JSON, вернуть None
         return None
 

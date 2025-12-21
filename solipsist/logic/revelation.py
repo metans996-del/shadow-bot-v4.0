@@ -85,5 +85,3 @@ class ManifestGenerator:
             logger.error(f"Failed to publish manifest {manifest.manifest_id}")
             return False
 
-
-

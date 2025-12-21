@@ -41,7 +41,7 @@ def main():
         logger.info("Scheduler started")
 
         # Основной цикл: проверка комментариев
-        logger.info("Entering main loop")
+        logger.info("Entering main loop - checking comments every 60 seconds")
         while True:
             try:
                 bot.run_comment_check()
@@ -62,3 +62,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

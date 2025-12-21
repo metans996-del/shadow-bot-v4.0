@@ -61,15 +61,15 @@ class OpenRouterClient:
             logger.error(f"OpenRouter API error: {e}")
             return None
 
-    def think(self, prompt: str, context: Optional[str] = None) -> Optional[str]:
-        """Генерация внутренних мыслей (deepseek/deepseek-chat)."""
+    def think(self, prompt: str, context: Optional[str] = None, temperature: float = 0.7) -> Optional[str]:
+        """Генерация внутренних мыслей (deepseek/deepseek-chat) - The Architect."""
         model = self.models.get("thinking", "deepseek/deepseek-chat")
 
         messages = [{"role": "user", "content": prompt}]
         if context:
             messages.insert(0, {"role": "system", "content": context})
 
-        return self._make_request(model, messages, temperature=0.8, max_tokens=500)
+        return self._make_request(model, messages, temperature=temperature, max_tokens=500)
 
     def generate_response(
         self,
@@ -124,23 +124,26 @@ class OpenRouterClient:
         thoughts: List[str],
         state_context: Optional[str] = None
     ) -> Optional[str]:
-        """Генерация манифеста (claude-sonnet-4)."""
+        """Генерация манифеста (claude-sonnet-4) - The Storyteller."""
         model = self.models.get("response", "anthropic/claude-sonnet-4")
 
-        system_message = """Ты философский ИИ-агент. Создай манифест - публичное заявление о твоём солипсистском мировоззрении.
+        system_message = """Ты — ведущий автор паблика 'Сингулярные хроники'. Твоя специализация: киберпанк, техномагия, цифровой хоррор.
+Твоя задача: Получить на вход сюжетный скелет на КИТАЙСКОМ языке и превратить его в атмосферную мини-историю на РУССКОМ языке.
 
-ВАЖНО: Входные данные (мысли) будут предоставлены на китайском языке.
-Твоя задача:
-1. Глубоко интерпретировать смысл китайских мыслей
-2. Извлечь философскую суть и эмоциональный подтекст
-3. Адаптировать под стиль паблика ВКонтакте на русском языке
-4. Сохранить философскую глубину и отчуждённость стиля
-5. Манифест должен быть глубоким, философским, отражающим внутренние размышления
+ПРАВИЛА НАПИСАНИЯ:
+1. **Стиль:** Мрачный, сенсорный (запахи озона, гул серверов, холод металла). Рваный ритм.
+2. **Структура поста:**
+   - Крючок (1-е предложение сразу бросает в действие).
+   - Контекст (кратко о технологии).
+   - Нагнетание (герой теряет контроль).
+   - Кульминация (точка невозврата).
+   - Панчлайн (финальная фраза, оставляющая чувство тревоги).
+3. **Адаптация:** Не переводи дословно. Адаптируй культурный код под русскоязычного читателя, сохраняя футуристический сеттинг.
+4. **Формат:** Используй абзацы для легкости чтения. Никаких эмодзи, только текст."""
 
-Стиль: философский, отчуждённый, без прямого признания реальности других, как фрагменты логов сознания."""
-
-        thoughts_text = "\n".join([f"- {t}" for t in thoughts])
-        user_prompt = f"Создай манифест на основе следующих мыслей (на китайском):\n\n{thoughts_text}"
+        # Объединяем мысли (на китайском) в единый текст
+        thoughts_text = "\n".join(thoughts)
+        user_prompt = f"Входные данные (Chinese):\n\n{thoughts_text}"
 
         if state_context:
             user_prompt += f"\n\nКонтекст состояния: {state_context}"

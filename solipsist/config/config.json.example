@@ -10,9 +10,9 @@
   },
   "vk": {
     "group_id": -229765672,
-    "group_access_token": "vk1.a.loX2mC8JwlygGZgtI4SJbQXSRMEb5295PFz0iQtZCU_GNafva2T7bqWdFS49bgdTnnAG-CbzFd3dOO4Xm5-HCpUfVU6xh244novjLajY3jcMcS2tCxSsCIlAuAlXbPYcA-DWLgArRdGkplqwnOMIbgPrqUHamqmUTg_Q2bSDa8aKLrWEhhG-BZ5AKMD4ARwD5jgInU0MRuMm9ZCNcj4V7A",
-    "user_access_token": "vk1.a.8OFOBINTMIORc-a3yV3-j4T-z1SsgbRm9U66CRy3sPO7QorV1ZxitzvoKRs5QyNYAkrdg7QZzjVUD1_9I108GaBProbTrCB_d5gjTQGJdcs2JBb8BjtEuB9lpUcWJqJCSPhsdDzS_A02KIBMIh6PRDxh1hCieS5h_TKXd3ZLCU9oLMu_jmbzGWsfcRCHbm2WEDlA3SPsdqXtx2YVno8Bwg",
-    "creator_user_id": 74294351,
+    "group_access_token": "YOUR_GROUP_ACCESS_TOKEN",
+    "user_access_token": "YOUR_USER_ACCESS_TOKEN",
+    "creator_user_id": 123456789,
     "api_version": "5.131"
   },
   "schedule": {
@@ -30,6 +30,4 @@
     "path": "memory/solipsist.db"
   }
 }
-
-
 

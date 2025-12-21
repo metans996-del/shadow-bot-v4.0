@@ -260,5 +260,3 @@ class Database:
             ))
         return manifests
 
-
-

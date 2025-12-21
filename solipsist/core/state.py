@@ -145,5 +145,3 @@ class StateManager:
             f"Целостность 'я': {self.self_coherence:.2f}"
         )
 
-
-

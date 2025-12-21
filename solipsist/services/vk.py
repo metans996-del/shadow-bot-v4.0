@@ -64,6 +64,33 @@ class VKClient:
             logger.error(f"VK API request error: {e}")
             return None
 
+    def _make_post_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
+        """Выполнить POST-запрос к VK API с передачей параметров через data (для длинных текстов)."""
+        if not self.group_access_token or self.group_access_token.startswith("YOUR_"):
+            logger.error("VK group access token not configured")
+            return None
+
+        params["access_token"] = self.group_access_token
+        params["v"] = self.api_version
+
+        try:
+            response = requests.post(
+                f"{self.api_base}/{method}",
+                data=params,  # Используем data вместо params для длинных текстов
+                timeout=30
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            if "error" in data:
+                logger.error(f"VK API error: {data['error']}")
+                return None
+
+            return data.get("response")
+        except Exception as e:
+            logger.error(f"VK API request error: {e}")
+            return None
+
     def get_new_comments(self, count: int = 20) -> List[Dict[str, Any]]:
         """Получить новые комментарии к постам группы."""
         owner_id = f"-{self.group_id}"
@@ -170,33 +197,6 @@ class VKClient:
 
         logger.info(f"Total comments retrieved: {len(all_comments)}")
         return all_comments[:count]
-
-    def _make_post_request(self, method: str, params: Dict[str, Any]) -> Optional[Dict]:
-        """Выполнить POST-запрос к VK API с передачей параметров через data (для длинных текстов)."""
-        if not self.group_access_token or self.group_access_token.startswith("YOUR_"):
-            logger.error("VK group access token not configured")
-            return None
-
-        params["access_token"] = self.group_access_token
-        params["v"] = self.api_version
-
-        try:
-            response = requests.post(
-                f"{self.api_base}/{method}",
-                data=params,  # Используем data вместо params для длинных текстов
-                timeout=30
-            )
-            response.raise_for_status()
-            data = response.json()
-
-            if "error" in data:
-                logger.error(f"VK API error: {data['error']}")
-                return None
-
-            return data.get("response")
-        except Exception as e:
-            logger.error(f"VK API request error: {e}")
-            return None
 
     def split_manifest(self, text: str) -> List[str]:
         """Разбить текст манифеста на части по MAX_VK_POST_LENGTH.
